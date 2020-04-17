@@ -94,7 +94,11 @@ int main(void)
   MX_ADC1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  uint8_t MSG[] = "HELLO_WORLD\n";
 
+  HAL_UART_Transmit(&huart2, MSG, sizeof(MSG)-1, 100);
+  HAL_ADC_Start(&hadc1);
+  uint16_t ADC_val = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -102,7 +106,15 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_val = HAL_ADC_GetValue(&hadc1);
 
+	  if (ADC_val >= 1600) {
+		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	  } else {
+		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+	  }
+	  HAL_ADC_Start(&hadc1);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
