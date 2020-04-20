@@ -40,8 +40,8 @@ ADC_MODULE.bin \
 all: ADC_MODULE.elf secondary-outputs
 
 # Tool invocations
-ADC_MODULE.elf: $(OBJS) $(USER_OBJS) D:\University\Digital_Design\Codigo_Plantilla\5_ADC\STM32L476RGTX_FLASH.ld
-	arm-none-eabi-gcc -o "ADC_MODULE.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\University\Digital_Design\Codigo_Plantilla\5_ADC\STM32L476RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ADC_MODULE.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+ADC_MODULE.elf: $(OBJS) $(USER_OBJS) /home/jfbg-linux/Documents/stm32_projects/STM32_ADC/STM32L476RGTX_FLASH.ld
+	arm-none-eabi-gcc -o "ADC_MODULE.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/jfbg-linux/Documents/stm32_projects/STM32_ADC/STM32L476RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ADC_MODULE.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

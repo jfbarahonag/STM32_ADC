@@ -63,7 +63,17 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+/**
+ * @brief  delay in clock cycles.
+ * Must be calculated with 0.24uS (1/4MHz) equal to 1 by a rule of three
+ * @retval None
+ */
+void delay ( uint8_t cycles ) {
+	uint8_t count = 0;
+	while (count < cycles) {
+		count++;
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -86,7 +96,7 @@ int main(void)
 	 * MSION = 1
 	 * MSIRDY = 1
 	 * MSIRANGE = 6 = 4MHz
-	 * PLLSAI1ON = 0 = SAI1 PLL disabled (Must be set)
+	 * PLLSAI1ON = 0 = SAI1 PLL disabled (Must be set AFTER all configurations)
 	 * MSIRGSEL = 0 = MSI Range is provided by MSISRANGE[3:0] in RCC_CSR register (Must be set)
 	 */
 	BITSET(RCC->CR, 3); /* MSIRGSEL */
@@ -123,6 +133,11 @@ int main(void)
 	BITSET(RCC->PLLSAI1CFGR, 24); /* PLLSAIR1EN */
 	BITSET(RCC->CR, 26); /* PLLSAI1ON */
 	/*
+	 * Peripherals independent clock configuration register (RCC->CCIPR): Reset value: 0x0000 0000
+	 * ADCSEL[1:0] = 00 = No clock selected (Must be set as 01 for selection of PLLSAI1"R" as ADCs clk)
+	 */
+	BITSET(RCC->CCIPR, 28);
+	/*
 	 * GPIO port mode register (GPIOx->MODER): Reset value: 0xABFF FFFF (for port A)
 	 * 										   Reset value: 0xFFFF FFFF (for port C)
 	 * MODE0 = 11 = Analog mode
@@ -134,6 +149,25 @@ int main(void)
 	 * ASC0 = 0 = Disconnect analog switch to the ADC input (Must be set to enable ADC input)
 	 */
 	BITSET(GPIOC->ASCR, 0); /* Connect analog switch to the ADC input */
+	/*
+	 * ADC control register (ADC->CR): Reset value: 0x2000 0000
+	 * DEEPPWD = 1 = in Deep-power-down (Must be cleared)
+	 * ADVREGEN = 0 = Voltage regulator disabled (Must be set after DEEPPWD)
+	 * ADCALDIF = 0 = Single-ended inputs mode
+	 * ADCAL = 0 = Calibration complete (Must be set to start it, then is cleared by HW)
+	 * ADSTART = 0 = No ADC regular conversion is ongoing (Must be set to start a conversion)
+	 * ADDIS = 0 = Set for disable ADC
+	 * ADEN = 0 = ADC is disabled (OFF state) (Must be set after all configurations)
+	 */
+	BITCLEAR(ADC1->CR, 29); /* DEEPPWD */
+	BITSET(ADC1->CR, 28); /* ADVREGEN */
+	delay(80); /* 80 uSeg [datasheet: Page 178] */
+	BITSET(ADC1->CR, 31); /* ADCAL */
+	while (ADC1->CR && (0b1<<31)){}
+
+
+
+
 	/* USER CODE END 1 */
 #else
 	/* MCU Configuration--------------------------------------------------------*/
