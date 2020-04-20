@@ -18,51 +18,25 @@
  */
 /* USER CODE END Header */
 
-/* Includes ------------------------------------------------------------------*/
-#include "main.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
 #define BITSET(var,bitno) ((var) |= 1UL<<(bitno))
 #define BITCLEAR(var,bitno) ((var) &= ~(1UL<<(bitno)))
 #define USE_OF_REGISTERS
-/* USER CODE END PD */
 
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
+#ifndef USE_OF_REGISTERS
 
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
+#include "main.h"
 ADC_HandleTypeDef hadc1;
-
 UART_HandleTypeDef huart2;
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART2_UART_Init(void);
-/* USER CODE BEGIN PFP */
 
-/* USER CODE END PFP */
+#else
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+#include "stm32l476xx.h"
+
+#endif
 /**
  * @brief  delay in clock cycles.
  * Must be calculated with 0.24uS (1/4MHz) equal to 1 by a rule of three
@@ -80,8 +54,7 @@ void delay ( uint8_t cycles ) {
  * @brief  The application entry point.
  * @retval int
  */
-int main(void)
-{
+int main(void) {
 	/* USER CODE BEGIN 1 */
 #ifdef USE_OF_REGISTERS
 	/*
@@ -144,6 +117,8 @@ int main(void)
 	 * MODE5 = 11 = Analog mode (For LD2 this must be set 01 as General Purpose Output)
 	 */
 	BITCLEAR(GPIOA->MODER, 11);
+	BITSET(GPIOA->BRR, 5); /* Turn off LD2 */
+
 	/*
 	 * GPIO port analog switch control register (GPIOx->ASCR): Reset value: 0x0000 0000
 	 * ASC0 = 0 = Disconnect analog switch to the ADC input (Must be set to enable ADC input)
@@ -151,6 +126,7 @@ int main(void)
 	BITSET(GPIOC->ASCR, 0); /* Connect analog switch to the ADC input */
 	/*
 	 * ADC control register (ADC->CR): Reset value: 0x2000 0000
+	 *
 	 * DEEPPWD = 1 = in Deep-power-down (Must be cleared)
 	 * ADVREGEN = 0 = Voltage regulator disabled (Must be set after DEEPPWD)
 	 * ADCALDIF = 0 = Single-ended inputs mode
@@ -162,12 +138,24 @@ int main(void)
 	BITCLEAR(ADC1->CR, 29); /* DEEPPWD */
 	BITSET(ADC1->CR, 28); /* ADVREGEN */
 	delay(80); /* 80 uSeg [datasheet: Page 178] */
-	BITSET(ADC1->CR, 31); /* ADCAL */
-	while (ADC1->CR && (0b1<<31)){}
+	//BITSET(ADC1->CR, 31); /* ADCAL */
+	/*
+	 * ADC configuration register (ADC1->CFGR): Reset value: 0x8000 0000
+	 *
+	 * CONT = 0 = Single conversion mode
+	 * ALIGN = 0 = Right alignment
+	 * RES = 00 = 12-bit resolution
+	 */
+	/*
+	 * ADC regular sequence register 1 (ADC1->SQR1): Reset value: 0x0000 0000
+	 * L = 0000 = 1 conversion
+	 * SQ1 = 0000 = 1st conversion in regular sequence (Must be written with #channel (CN1 = 0001))
+	 */
+	BITSET(ADC1->SQR1, 6); /* Channel 1 */
 
-
-
-
+	BITSET(ADC1->CR, 0); /* ADEN */
+	delay(10); /* wait stabilization of the ADC */
+	BITSET(ADC1->CR, 2); /* ADSTART */
 	/* USER CODE END 1 */
 #else
 	/* MCU Configuration--------------------------------------------------------*/
@@ -194,31 +182,49 @@ int main(void)
 	//	uinta8_t MSG[] = "HELLO_WORLD\n";
 
 	//	HAL_UART_Transmit(&huart2, MSG, sizeof(MSG)-1, 100);
-	//	HAL_ADC_Start(&hadc1);
+	HAL_ADC_Start(&hadc1);
 	//	uint16_t ADC_val = 0;
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 #endif
+	/*
+	 * ADC regular data register (ADC1->DR): Reset value: 0x0000 0000
+	 * They contain the conversion result from the last converted regular channel.
+	 */
+	uint16_t ADC_val = 0;
 	while (1)
 	{
-		//	  HAL_ADC_PollForConversion(&hadc1, 1000);
-		//	  ADC_val = HAL_ADC_GetValue(&hadc1);
-		//
-		//	  if (ADC_val >= 1600) {
-		//		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		//	  } else {
-		//		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-		//	  }
-		//	  HAL_ADC_Start(&hadc1);
+#ifdef USE_OF_REGISTERS
+		if ( ADC1->ISR && (1U<<2) ) { /* Check EOC flag */
+			ADC_val = ADC1->DR;
+		}
+		if (ADC_val >= 1600) {
+			BITSET(GPIOA->BSRR, 5);  /* LD2 ON */
+		} else {
+			BITSET(GPIOA->BRR, 5);  /* LD2 OFF */
+		}
+		BITSET(ADC1->CR, 2); /* ADSTART */;
+
+#else
+		HAL_ADC_PollForConversion(&hadc1, 1000);
+		ADC_val = HAL_ADC_GetValue(&hadc1);
+
+		if (ADC_val >= 1600) {
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+		} else {
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+		}
+		HAL_ADC_Start(&hadc1);
+#endif
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
 	}
 	/* USER CODE END 3 */
 }
-
+#ifndef USE_OF_REGISTERS
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -432,5 +438,5 @@ void assert_failed(uint8_t *file, uint32_t line)
 	/* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
+#endif
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
