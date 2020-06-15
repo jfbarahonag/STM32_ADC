@@ -101,3 +101,22 @@ When EOC flag is set, measure must be taken.
 
 ![imagen](https://user-images.githubusercontent.com/28329247/84619064-a6ce7900-ae99-11ea-9e52-25e88aa100b7.png)
 
+## Example
+
+This code consists in a basic configuration and use of ADC module.
+
+### Ports & Pins used
+
+* PORT C & Pin 0 as input (Potentiometer could be connected here or a wire to VCC & GND for testing).
+* PORT A & Pin 5 as output (LD2 in STM32L476RG nucleo board).
+
+### Description
+
+When ADC value is above of a threshold, PA5 is turned ON, otherwise PA5 is turned OFF.
+
+### Use of HAL
+
+Here is not explained the use of HAL, but there is the same example (and configuration) using HAL.
+
+If you want use HAL you can comment ```Line 59``` and the configuration with registers will be disabled 
+
