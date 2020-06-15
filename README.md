@@ -118,5 +118,5 @@ When ADC value is above of a threshold, PA5 is turned ON, otherwise PA5 is turne
 
 Here is not explained the use of HAL, but there is the same example (and configuration) using HAL.
 
-If you want use HAL you can comment ```Line 59``` and the configuration with registers will be disabled 
+If you want use HAL you can comment ```Line 23``` and the configuration with registers will be disabled 
 
